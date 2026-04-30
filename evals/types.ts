@@ -1,5 +1,10 @@
 export type Difficulty = "simple" | "medium" | "hard" | "edge";
-export type Category = "layout" | "content" | "structure" | "edge-case";
+export type Category =
+  | "layout"
+  | "content"
+  | "structure"
+  | "edge-case"
+  | "create";
 
 export interface TestCase {
   id: string;
