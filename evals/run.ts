@@ -30,6 +30,8 @@ async function runTestCase(testCase: TestCase): Promise<EvalResult> {
 
     const elements: any[] = [];
     for (const step of result.steps) {
+      // Aggregate the result of every tool call
+      // since there's no single object to view all of the results later
       for (const toolResult of step.toolResults ?? []) {
         if (toolResult.toolName === "generateDiagram") {
           const output = toolResult.output as any;
