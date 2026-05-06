@@ -12,10 +12,12 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateText, stepCountIs } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { extractElements, runAgent } from "../src/agent-core";
 
 import { tools } from "../src/tools";
 import { SYSTEM_PROMPT } from "../src/system-prompt";
 import type { TestCase, EvalResult } from "./types";
+import { buildMessages } from "./buildMessages";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -49,26 +51,12 @@ const openai = createOpenAI({ apiKey });
 async function runTestCase(testCase: TestCase): Promise<EvalResult> {
   const start = Date.now();
   try {
-    const result = await generateText({
+    const result = await runAgent({
       model: openai("gpt-5.4-mini"),
-      system: SYSTEM_PROMPT,
-      prompt: testCase.input,
-      tools,
-      stopWhen: stepCountIs(5),
+      messages: buildMessages(testCase),
     });
 
-    // Find any generateDiagram tool calls and pull out the elements they produced.
-    const elements: unknown[] = [];
-    for (const step of result.steps) {
-      for (const toolResult of step.toolResults ?? []) {
-        if (toolResult.toolName === "generateDiagram") {
-          const output = toolResult.output as { elements?: unknown[] };
-          if (Array.isArray(output?.elements)) {
-            elements.push(...output.elements);
-          }
-        }
-      }
-    }
+    const elements = extractElements(result.steps);
 
     return {
       testCaseId: testCase.id,
@@ -103,9 +91,7 @@ async function main() {
     if (result.error) {
       console.log(`ERROR: ${result.error}`);
     } else {
-      console.log(
-        `${result.elements.length} elements, ${result.durationMs}ms`
-      );
+      console.log(`${result.elements.length} elements, ${result.durationMs}ms`);
     }
   }
 
@@ -117,17 +103,19 @@ async function main() {
   writeFileSync(outPath, JSON.stringify(results, null, 2));
 
   console.log(`\nResults written to ${outPath}`);
-  console.log(`\nNext: open the file, review each result, and add score (1-5) and notes.`);
+  console.log(
+    `\nNext: open the file, review each result, and add score (1-5) and notes.`,
+  );
 
   // Quick summary
   console.log("\n=== Summary ===");
   console.log(`Total: ${results.length}`);
   console.log(`Errors: ${results.filter((r) => r.error).length}`);
   console.log(
-    `Empty results (no elements): ${results.filter((r) => !r.error && r.elements.length === 0).length}`
+    `Empty results (no elements): ${results.filter((r) => !r.error && r.elements.length === 0).length}`,
   );
   const avgDuration = Math.round(
-    results.reduce((sum, r) => sum + r.durationMs, 0) / results.length
+    results.reduce((sum, r) => sum + r.durationMs, 0) / results.length,
   );
   console.log(`Average duration: ${avgDuration}ms`);
 }
