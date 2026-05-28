@@ -10,6 +10,7 @@ import {
   type ModelMessage,
 } from "ai";
 import { tools } from "./tools";
+import { serializeCanvasState } from "./context/canvas-state";
 
 export const SYSTEM_PROMPT = `# Role
 
@@ -79,16 +80,22 @@ interface AgentArgs {
   maxSteps?: number;
 }
 
+// We need to deliver the system prompt with the current canvas state.
+const buildSystemPrompt = (base: string, canvasState?: any[]) => {
+  return `${base}\n\n# Current Canvas state\n\n${serializeCanvasState(canvasState ?? [])}`;
+};
+
 // Streaming variant. Used by the worker for the live chat experience.
 export function streamAgent({
   model,
   messages,
   system = SYSTEM_PROMPT,
   maxSteps = 5,
+  canvasState,
 }: AgentArgs) {
   return streamText({
     model,
-    system,
+    system: buildSystemPrompt(system, canvasState),
     messages,
     tools,
     stopWhen: stepCountIs(maxSteps),
