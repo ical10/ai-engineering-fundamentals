@@ -10,24 +10,13 @@ import { useAgentChat } from "@cloudflare/ai-chat/react";
 import Canvas from "./components/Canvas";
 import ChatPanel from "./components/chat/ChatPanel";
 import { serializeCanvasState } from "./context/canvas-state";
+import { stripNulls } from "./context/apply-skeleton";
 import "./App.css";
 
 // One agent instance per page load. The canvas state lives only in the
 // browser, so persisting chat history across refreshes would leave a dead
 // conversation referencing diagrams that no longer exist.
 const sessionId = crypto.randomUUID();
-
-// Drop null valued fields. Our tool schemas use nullable rather than
-// optional so OpenAI strict mode stays on, which means the agent always
-// sends every field. Excalidraw expects undefined for "use the default,"
-// not null, and choking on `points: null` for a rectangle is a real bug.
-function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (v !== null) out[k] = v;
-  }
-  return out;
-}
 
 export default function App() {
   const [excalidrawAPI, setExcalidrawAPI] =
@@ -55,30 +44,45 @@ export default function App() {
     onToolCall: async ({ toolCall, addToolOutput }) => {
       const api = excalidrawAPIRef.current;
       if (!api) {
-        addToolOutput({ toolCallId: toolCall.toolCallId, output: { error: "canvas not ready" } });
+        addToolOutput({
+          toolCallId: toolCall.toolCallId,
+          output: { error: "canvas not ready" },
+        });
         return;
       }
 
       if (toolCall.toolName === "queryCanvas") {
         addToolOutput({
           toolCallId: toolCall.toolCallId,
-          output: { summary: serializeCanvasState(api.getSceneElements() as unknown[]) },
+          output: {
+            summary: serializeCanvasState(api.getSceneElements() as unknown[]),
+          },
         });
         return;
       }
 
       if (toolCall.toolName === "addElements") {
-        const { elements } = toolCall.input as { elements: Record<string, unknown>[] };
+        const { elements } = toolCall.input as {
+          elements: Record<string, unknown>[];
+        };
         // Strip null fields before handing to convertToExcalidrawElements.
         // Our nullable schema forces the model to send every field, but
         // Excalidraw expects undefined (not null) for "use the default."
         // Null `points`, `startBinding`, `endBinding` will crash the helper.
         const cleaned = elements.map(stripNulls);
-        const newOnes = convertToExcalidrawElements(cleaned as never, { regenerateIds: false });
+        const newOnes = convertToExcalidrawElements(cleaned as never, {
+          regenerateIds: false,
+        });
         const next = [...api.getSceneElements(), ...newOnes];
-        api.updateScene({ elements: next, captureUpdate: CaptureUpdateAction.IMMEDIATELY });
+        api.updateScene({
+          elements: next,
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
         api.scrollToContent(next, { fitToContent: true });
-        addToolOutput({ toolCallId: toolCall.toolCallId, output: { added: newOnes.length } });
+        addToolOutput({
+          toolCallId: toolCall.toolCallId,
+          output: { added: newOnes.length },
+        });
         return;
       }
 
@@ -93,8 +97,14 @@ export default function App() {
             ? newElementWith(el, fields as never)
             : el;
         });
-        api.updateScene({ elements: next, captureUpdate: CaptureUpdateAction.IMMEDIATELY });
-        addToolOutput({ toolCallId: toolCall.toolCallId, output: { updated: byId.size } });
+        api.updateScene({
+          elements: next,
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
+        addToolOutput({
+          toolCallId: toolCall.toolCallId,
+          output: { updated: byId.size },
+        });
         return;
       }
 
@@ -102,8 +112,14 @@ export default function App() {
         const { ids } = toolCall.input as { ids: string[] };
         const remove = new Set(ids);
         const next = api.getSceneElements().filter((el) => !remove.has(el.id));
-        api.updateScene({ elements: next, captureUpdate: CaptureUpdateAction.IMMEDIATELY });
-        addToolOutput({ toolCallId: toolCall.toolCallId, output: { removed: remove.size } });
+        api.updateScene({
+          elements: next,
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
+        addToolOutput({
+          toolCallId: toolCall.toolCallId,
+          output: { removed: remove.size },
+        });
         return;
       }
     },
@@ -119,7 +135,11 @@ export default function App() {
         sendMessage={sendMessage}
         status={status}
       />
-      <a href="#viewer" className="viewer-launch" title="Open diagram viewer for human scoring">
+      <a
+        href="#viewer"
+        className="viewer-launch"
+        title="Open diagram viewer for human scoring"
+      >
         viewer
       </a>
     </div>
