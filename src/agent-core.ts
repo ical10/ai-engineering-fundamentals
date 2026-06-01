@@ -14,6 +14,7 @@ import {
 import { z } from "zod";
 import { buildTools } from "./tools";
 import { serializeCanvasState } from "./context/canvas-state";
+import { applySkeleton } from "./context/apply-skeleton";
 
 export const SYSTEM_PROMPT = `# Role
 
@@ -161,8 +162,11 @@ export async function runAgent({
       description: baseTools.addElements.description,
       inputSchema: baseTools.addElements.inputSchema as never,
       execute: async ({ elements }: { elements: unknown[] }) => {
-        for (const el of elements) sim.push({ ...(el as object) });
-        return { elements };
+        const runtimeElements = applySkeleton(
+          elements as Record<string, unknown>[],
+        );
+        for (const el of runtimeElements) sim.push({ ...(el as object) });
+        return { added: runtimeElements.length };
       },
     }),
     updateElements: tool({
