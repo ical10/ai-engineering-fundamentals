@@ -12,7 +12,7 @@ import {
   type ModelMessage,
 } from "ai";
 import { z } from "zod";
-import { buildTools } from "./tools";
+import { buildTools, type ToolEnv } from "./tools";
 import { serializeCanvasState } from "./context/canvas-state";
 import { applySkeleton } from "./context/applySkeleton";
 import { findOverlaps } from "./context/overlaps";
@@ -114,7 +114,7 @@ interface AgentArgs {
   seedCanvas?: unknown[];
   system?: string;
   maxSteps?: number;
-  env?: { TAVILY_API_KEY?: string };
+  env?: ToolEnv;
 }
 
 // Streaming variant. Used by the worker for the live chat experience.
