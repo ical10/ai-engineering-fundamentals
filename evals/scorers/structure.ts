@@ -23,7 +23,12 @@ function parseExpectedCounts(expected: string[]): Record<string, number> {
   const joined = expected.join(" ").toLowerCase();
   for (const [type, keywords] of Object.entries(TYPE_KEYWORDS)) {
     for (const kw of keywords) {
-      const re = new RegExp(`(\\d+)\\s+${kw}\\b`, "g");
+      // Allow up to 3 adjective/qualifier words between the number and the
+      // keyword so phrasings like "4 labeled rectangles", "8 computer boxes",
+      // "3 service boxes" parse correctly. Without the {0,3} clause the regex
+      // requires the number directly adjacent to the keyword, which fails
+      // silently on most natural-language expectations and falls back to 0.5.
+      const re = new RegExp(`(\\d+)\\s+(?:\\S+\\s+){0,3}${kw}\\b`, "g");
       let match: RegExpExecArray | null;
       while ((match = re.exec(joined)) !== null) {
         const n = parseInt(match[1]!, 10);
