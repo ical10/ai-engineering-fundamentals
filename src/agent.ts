@@ -2,6 +2,7 @@ import { AIChatAgent } from "@cloudflare/ai-chat";
 import { convertToModelMessages } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamAgent } from "./agent-core";
+import { compactHistory } from "./context/compaction";
 
 interface Env extends Cloudflare.Env {
   OPENAI_API_KEY: string;
