@@ -1,0 +1,46 @@
+import { tool } from "ai";
+import { z } from "zod";
+import { getIndex, type VectorEnv } from "../rag/vector-store";
+
+export function makeSearchKnowledge(env: VectorEnv) {
+  return tool({
+    description: `Search the private knowledge base for reference material on systems, processes, and topics the user might ask you to draw. Use this BEFORE drawing when the request touches a specific technical system, protocol, organizational structure, or process where precise details matter. The corpus contains short reference docs the model may not have memorized accurately.
+
+Example: searchKnowledge({ query: "OAuth 2.0 authorization code flow with PKCE"})`,
+    inputSchema: z.object({
+      //TODO: The query here is inferred directly by the LLM
+      // (but no direct access to evals).
+      // We can improve this by having a properly-evaled,
+      // separate LLM which is specifically designed to create
+      // a good query.
+      query: z
+        .string()
+        .describe("Natural language query describing what you need to know"),
+    }),
+    execute: async ({ query }) => {
+      try {
+        const index = getIndex(env);
+        const results = await index.query({
+          data: query,
+          // topK=3 gives the agent enough variety without flooding the context window.
+          topK: 3,
+          includeMetadata: true,
+        });
+        return {
+          results: results.map((r) => ({
+            source:
+              (r.metadata as { source?: string } | undefined)?.source ??
+              String(r.id),
+            content:
+              (r.metadata as { content?: string } | undefined)?.content ?? "",
+            score: r.score,
+          })),
+        };
+      } catch (err) {
+        return {
+          error: `Knowledge search failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    },
+  });
+}
