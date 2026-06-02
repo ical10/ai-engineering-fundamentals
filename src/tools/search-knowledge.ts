@@ -8,8 +8,8 @@ export function makeSearchKnowledge(env: VectorEnv) {
 
 Example: searchKnowledge({ query: "OAuth 2.0 authorization code flow with PKCE"})`,
     inputSchema: z.object({
-      //TODO: The query here is inferred directly by the LLM
-      // (but no direct access to evals).
+      //TODO: The query here is generated directly by the LLM
+      // (the description here provides very little context -> generated query is arguably bad).
       // We can improve this by having a properly-evaled,
       // separate LLM which is specifically designed to create
       // a good query.
